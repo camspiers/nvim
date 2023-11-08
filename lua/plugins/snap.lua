@@ -1,5 +1,6 @@
 return {
-  "camspiers/snap",
+  -- "camspiers/snap",
+  dir = "~/dev/snap",
   config = function()
     local snap = require("snap")
 
