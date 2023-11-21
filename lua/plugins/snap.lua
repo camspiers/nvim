@@ -1,9 +1,8 @@
 return {
   {
     "camspiers/luarocks",
-    dependencies = {
-      "rcarriga/nvim-notify",
-    },
+    lazy = true,
+    dependencies = { "rcarriga/nvim-notify" },
     opts = {
       rocks = { "fzy" },
     },
@@ -11,36 +10,29 @@ return {
   {
     -- "camspiers/snap",
     dir = "~/dev/snap",
-    dependencies = {
-      "camspiers/luarocks",
+    lazy = true,
+    dependencies = { "camspiers/luarocks" },
+    -- Add used keys here with nil to enable lazy loading
+    keys = {
+      { "<Leader><Leader>", nil },
+      { "<Leader>fg", nil },
+      { "<Leader>fb", nil },
+      { "<Leader>fo", nil },
+      { "<Leader>ff", nil },
+      { "<Leader>m", nil },
+      { "<Leader>fm", nil },
+      { "<Leader>n", nil },
+      { "<Leader>N", nil },
+      { "<Leader>fi", nil },
+      { "<Leader>fj", nil },
     },
     config = function()
       local snap = require("snap")
       local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
 
-      -- Get marks
-      local marks = snap.get("producer.vim.marks")
-      local marks_global = snap.get("producer.vim.globalmarks")
-      local mark_preview = snap.get("preview.vim.mark")
-      local mark_select = snap.get("select.vim.mark")
+      local defaults = { prompt = "", suffix = "»" }
 
-      -- Get current buffer
-      local currentbuffer = snap.get("producer.vim.currentbuffer")
-      local currentbuffer_select = snap.get("select.vim.currentbuffer")
-
-      local defaults = {
-        prompt = "",
-        suffix = "\194\187",
-        reverse = true,
-        layout = function()
-          return snap.get("layout")["%centered"](0.95, 0.8)
-        end,
-      }
-
-      local file = snap.config.file:with(vim.tbl_extend("force", defaults, {
-        consumer = pcall(require, "fzy") and "fzy" or "fzf",
-      }))
-
+      local file = snap.config.file:with(defaults)
       local vimgrep = snap.config.vimgrep:with(vim.tbl_extend("force", defaults, {
         limit = 50000,
       }))
@@ -61,9 +53,9 @@ return {
           "<Leader>n",
           function()
             snap.run({
-              producer = filter(marks),
-              select = mark_select.select,
-              views = { mark_preview },
+              producer = filter(snap.get("producer.vim.marks")),
+              select = snap.get("select.vim.mark").select,
+              views = { snap.get("preview.vim.mark") },
             })
           end,
           { desc = "Search local marks" },
@@ -72,9 +64,9 @@ return {
           "<Leader>N",
           function()
             snap.run({
-              producer = filter(marks_global),
-              select = mark_select.select,
-              views = { mark_preview },
+              producer = filter(snap.get("producer.vim.globalmarks")),
+              select = snap.get("select.vim.mark").select,
+              views = { snap.get("preview.vim.mark") },
             })
           end,
           { desc = "Search global marks" },
@@ -83,11 +75,22 @@ return {
           "<Leader>fi",
           function()
             snap.run({
-              producer = filter(currentbuffer),
-              select = currentbuffer_select.select,
+              producer = filter(snap.get("producer.vim.currentbuffer")),
+              select = snap.get("select.vim.currentbuffer").select,
             })
           end,
           { desc = "Search in current buffer" },
+        },
+        {
+          "<Leader>fj",
+          function()
+            snap.run({
+              producer = filter(require("snap.producer.vim.jumplist")),
+              select = snap.get("select.jumplist").select,
+              views = { snap.get("preview.jumplist") },
+            })
+          end,
+          { desc = "Search in Jumplist" },
         },
       })
     end,

@@ -1,14 +1,9 @@
 return {
+  { "nvim-telescope/telescope.nvim", enabled = false },
   { "akinsho/bufferline.nvim", enabled = false },
   { "nvim-neo-tree/neo-tree.nvim", enabled = false },
   { "folke/noice.nvim", enabled = false },
   { "nvimdev/dashboard-nvim", enabled = false },
-  {
-    "nvim-telescope/telescope.nvim",
-    keys = function()
-      return {}
-    end,
-  },
   { "echasnovski/mini.indentscope", enabled = false },
   { "folke/flash.nvim", enabled = false },
   { "RRethy/vim-illuminate", enabled = false },
@@ -16,4 +11,9 @@ return {
   { "stevearc/dressing.nvim", enabled = false },
   { "MunifTanjim/nui.nvim", enabled = false },
   { "folke/tokyonight.nvim", enabled = false },
+  { "nvim-tresitter/nvim-treesitter-context", enabled = false },
+  { "folke/persistence.nvim", enabled = false },
+  { "echasnovski/mini.pairs", enabled = false },
+  { "echasnovski/mini.ai", enabled = false },
+  { "windwp/nvim-ts-autotag", enabled = false },
 }
