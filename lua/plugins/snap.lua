@@ -10,13 +10,13 @@ local MAPPINGS = {
   GLOBAL_MARKS = "<Leader>N",
   BUFFER = "<Leader>fi",
   JUMPLIST = "<Leader>fj",
-}
 
-local MAPPINGS_LSP = {
   -- LazyVim LSP overrides
   GO_TO_DEFINITION = "gd",
   GO_TO_IMPLEMENTATION = "gI",
   GO_TO_TYPE_DEFINITION = "gy",
+  GO_TO_REFERENCES = "gr",
+  SHOW_SYMBOLS = "gb",
 }
 
 local function mappings_to_keys(mappings)
@@ -25,78 +25,71 @@ local function mappings_to_keys(mappings)
   end, vim.tbl_values(mappings))
 end
 
-local function lsp_request(action, winnr, on_value, on_error)
-  vim.lsp.buf_request(
-    vim.api.nvim_win_get_buf(winnr),
-    action,
-    vim.lsp.util.make_position_params(winnr),
-    function(error, result, context, _)
-      if error then
-        on_error(error)
-      else
-        on_value({
-          locations = vim.tbl_islist(result) and result or { result },
-          context = context,
-        })
-      end
+local function make_lsp_request(bufnr, action, params, on_value, on_error)
+  vim.lsp.buf_request(bufnr, action, params, function(error, result, context)
+    if error then
+      on_error(error)
+    else
+      on_value({
+        results = vim.tbl_islist(result) and result or { result },
+        context = context,
+      })
     end
-  )
+  end)
 end
 
-local function create_lsp_producer(action)
+local function create_lsp_producer(action, make_params, process_results)
   local snap = require("snap")
+
   return function(request)
     local response, error = snap.async(function(resolve, reject)
       snap.sync(function()
-        lsp_request(action, request.winnr, resolve, reject)
+        make_lsp_request(vim.api.nvim_win_get_buf(request.winnr), action, make_params(request.winnr), resolve, reject)
       end)
     end)
 
-    if response == nil or error or #response.locations == 0 then
+    if response == nil or error or #response.results == 0 then
       if error then
         snap.sync(function()
-          vim.notify("There was an error when calling LSP", vim.log.levels.ERROR)
+          vim.notify("There was an error when calling LSP: " .. error.message, vim.log.levels.ERROR)
         end)
       end
       return {}
-    else
-      local offset_encoding = snap.sync(function()
-        return vim.lsp.get_client_by_id(response.context.client_id).offset_encoding
-      end)
-      return vim.tbl_map(
-        function(item)
-          return snap.with_metas(item.filename, vim.tbl_extend("force", item, { offset_encoding = offset_encoding }))
-        end,
-        snap.sync(function()
-          return vim.lsp.util.locations_to_items(response.locations, offset_encoding)
-        end)
-      )
     end
+
+    return process_results(request, response)
   end
 end
 
-local function create_snap_lsp_handler(action)
-  return function()
-    local snap = require("snap")
-    local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
-    local select = snap.get("select.common.file")(function(selection)
-      -- TODO: This shows that I need to tidy up the standard types for path, lnum and column
-      return { path = selection.filename, lnum = selection.lnum, col = selection.col }
+local function create_lsp_location_producer(action, make_params)
+  local snap = require("snap")
+  return create_lsp_producer(action, make_params or vim.lsp.util.make_position_params, function(_, response)
+    local offset_encoding = snap.sync(function()
+      return vim.lsp.get_client_by_id(response.context.client_id).offset_encoding
     end)
-    local preview = snap.get("preview.common.create-file-preview")(function(selection)
-      return { path = selection.filename, line = selection.lnum, column = selection.col }
-    end)
-    local autoselect = function(selection)
-      vim.lsp.util.jump_to_location(selection.user_data, selection.offset_encoding, true)
-    end
+    return vim.tbl_map(
+      function(item)
+        return snap.with_metas(item.filename, vim.tbl_extend("force", item, { offset_encoding = offset_encoding }))
+      end,
+      snap.sync(function()
+        return vim.lsp.util.locations_to_items(response.results, offset_encoding)
+      end)
+    )
+  end)
+end
 
-    snap.run({
-      producer = filter(create_lsp_producer(action)),
-      select = select,
-      views = { preview },
-      autoselect = autoselect,
-    })
-  end
+local function create_lsp_symbol_producer(action, make_params)
+  local snap = require("snap")
+  return create_lsp_producer(action, make_params or vim.lsp.util.make_position_params, function(request, response)
+    return vim.tbl_map(
+      function(item)
+        return snap.with_metas(item.text, item)
+      end,
+      snap.sync(function()
+        return vim.lsp.util.symbols_to_items(response.results, vim.api.nvim_win_get_buf(request.winnr))
+      end)
+    )
+  end)
 end
 
 return {
@@ -110,27 +103,12 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    -- This is required because I want to override LazyVims telescope bindings with snap
     dependencies = { "camspiers/snap" },
-    keys = mappings_to_keys(MAPPINGS_LSP),
-    init = function()
-      local keys = require("lazyvim.plugins.lsp.keymaps").get()
-      table.insert(keys, {
-        MAPPINGS_LSP.GO_TO_DEFINITION,
-        create_snap_lsp_handler("textDocument/definition"),
-      })
-      table.insert(keys, {
-        MAPPINGS_LSP.GO_TO_IMPLEMENTATION,
-        create_snap_lsp_handler("textDocument/implementation"),
-      })
-      table.insert(keys, {
-        MAPPINGS_LSP.GO_TO_TYPE_DEFINITION,
-        create_snap_lsp_handler("textDocument/typeDefinition"),
-      })
-    end,
   },
   {
-    -- "camspiers/snap",
-    dir = "~/dev/snap",
+    "camspiers/snap",
+    -- dir = "~/dev/snap",
     dependencies = { "camspiers/luarocks" },
     keys = mappings_to_keys(MAPPINGS),
     config = function()
@@ -196,6 +174,78 @@ return {
             })
           end,
           { desc = "Search in Jumplist" },
+        },
+      })
+
+      local lsp_select = snap.get("select.common.file")(function(selection)
+        -- TODO: This shows that I need to tidy up the standard types for path, lnum and column
+        return { path = selection.filename, lnum = selection.lnum, col = selection.col }
+      end)
+
+      local lsp_preview = snap.get("preview.common.create-file-preview")(function(selection)
+        return { path = selection.filename, line = selection.lnum, column = selection.col }
+      end)
+
+      local function create_snap_lsp_location_handler(action, make_params)
+        return function()
+          snap.run({
+            producer = filter(create_lsp_location_producer(action, make_params)),
+            select = lsp_select,
+            views = { lsp_preview },
+            autoselect = function(selection)
+              vim.lsp.util.jump_to_location(selection.user_data, selection.offset_encoding, true)
+            end,
+          })
+        end
+      end
+
+      local function create_snap_lsp_references_handler()
+        return create_snap_lsp_location_handler("textDocument/references", function(winnr)
+          return vim.tbl_deep_extend("force", vim.lsp.util.make_position_params(winnr), {
+            context = {
+              includeDeclaration = true,
+            },
+          })
+        end)
+      end
+
+      local function create_snap_lsp_symbol_handler(action, make_params)
+        return function()
+          snap.run({
+            producer = filter(create_lsp_symbol_producer(action, make_params)),
+            select = lsp_select,
+            views = { lsp_preview },
+          })
+        end
+      end
+
+      local keys = require("lazyvim.plugins.lsp.keymaps").get()
+
+      vim.list_extend(keys, {
+        {
+          MAPPINGS.GO_TO_DEFINITION,
+          create_snap_lsp_location_handler("textDocument/definition"),
+          desc = "Go to definition",
+        },
+        {
+          MAPPINGS.GO_TO_IMPLEMENTATION,
+          create_snap_lsp_location_handler("textDocument/implementation"),
+          desc = "Go to implementation",
+        },
+        {
+          MAPPINGS.GO_TO_TYPE_DEFINITION,
+          create_snap_lsp_location_handler("textDocument/typeDefinition"),
+          desc = "Go to type definition",
+        },
+        {
+          MAPPINGS.GO_TO_REFERENCES,
+          create_snap_lsp_references_handler(),
+          desc = "Go to references",
+        },
+        {
+          MAPPINGS.SHOW_SYMBOLS,
+          create_snap_lsp_symbol_handler("textDocument/documentSymbol"),
+          desc = "Show symbols",
         },
       })
     end,
