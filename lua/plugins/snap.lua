@@ -19,85 +19,82 @@ local MAPPINGS_LSP = {
   GO_TO_TYPE_DEFINITION = "gy",
 }
 
+local function mappings_to_keys(mappings)
+  return vim.tbl_map(function(value)
+    return { value, nil }
+  end, vim.tbl_values(mappings))
+end
+
+local function lsp_request(action, winnr, on_value, on_error)
+  vim.lsp.buf_request(
+    vim.api.nvim_win_get_buf(winnr),
+    action,
+    vim.lsp.util.make_position_params(winnr),
+    function(error, result, context, _)
+      if error then
+        on_error(error)
+      else
+        on_value({
+          locations = vim.tbl_islist(result) and result or { result },
+          context = context,
+        })
+      end
+    end
+  )
+end
+
+local function create_lsp_producer(action)
+  local snap = require("snap")
+  return function(request)
+    local response, error = snap.async(function(resolve, reject)
+      snap.sync(function()
+        lsp_request(action, request.winnr, resolve, reject)
+      end)
+    end)
+
+    if response == nil or error or #response.locations == 0 then
+      if error then
+        snap.sync(function()
+          vim.notify("There was an error when calling LSP", vim.log.levels.ERROR)
+        end)
+      end
+      return {}
+    else
+      local offset_encoding = snap.sync(function()
+        return vim.lsp.get_client_by_id(response.context.client_id).offset_encoding
+      end)
+      return vim.tbl_map(
+        function(item)
+          return snap.with_metas(item.filename, vim.tbl_extend("force", item, { offset_encoding = offset_encoding }))
+        end,
+        snap.sync(function()
+          return vim.lsp.util.locations_to_items(response.locations, offset_encoding)
+        end)
+      )
+    end
+  end
+end
+
 local function create_snap_lsp_handler(action)
   return function()
     local snap = require("snap")
-
-    local function async(executor)
-      local value = nil
-      local error = nil
-      local function resolve(val)
-        value = val
-      end
-      local function reject(err)
-        error = err
-      end
-      executor(resolve, reject)
-      while value == nil and error == nil do
-        snap.continue()
-      end
-      return value, error
+    local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
+    local select = snap.get("select.common.file")(function(selection)
+      -- TODO: This shows that I need to tidy up the standard types for path, lnum and column
+      return { path = selection.filename, lnum = selection.lnum, col = selection.col }
+    end)
+    local preview = snap.get("preview.common.create-file-preview")(function(selection)
+      return { path = selection.filename, line = selection.lnum, column = selection.col }
+    end)
+    local autoselect = function(selection)
+      vim.lsp.util.jump_to_location(selection.user_data, selection.offset_encoding, true)
     end
 
     snap.run({
-      producer = function(request)
-        -- To exit just delete the current buffer
-        local exit = function()
-          snap.sync(function()
-            vim.api.nvim_buf_delete(vim.api.nvim_get_current_buf(), { force = true })
-          end)
-        end
-
-        local response, error = async(function(resolve, reject)
-          snap.sync(function()
-            vim.lsp.buf_request(
-              vim.api.nvim_win_get_buf(request.winnr),
-              action,
-              vim.lsp.util.make_position_params(request.winnr),
-              function(error, result, context, _)
-                if error then
-                  reject(error)
-                else
-                  resolve({ locations = vim.tbl_islist(result) and result or { result }, context = context })
-                end
-              end
-            )
-          end)
-        end)
-
-        if response == nil or error or #response.locations == 0 then
-          exit()
-        elseif #response.locations == 1 then
-          exit()
-          snap.sync(function()
-            vim.lsp.util.jump_to_location(
-              response.locations[1],
-              vim.lsp.get_client_by_id(response.context.client_id).offset_encoding,
-              true
-            )
-          end)
-        else
-          return vim.tbl_map(
-            function(item)
-              return snap.with_metas(item.filename, item)
-            end,
-            snap.sync(function()
-              return vim.lsp.util.locations_to_items(
-                response.locations,
-                vim.lsp.get_client_by_id(response.context.client_id).offset_encoding
-              )
-            end)
-          )
-        end
-      end,
-      select = require("snap.select.common.file")(function(selection)
-        return { path = selection.filename, lnum = selection.lnum, col = selection.col }
-      end),
-      views = {
-        require("snap.preview.common.create-file-preview")(function(selection)
-          return { path = selection.filename, line = selection.lnum, column = selection.col }
-        end),
-      },
+      producer = filter(create_lsp_producer(action)),
+      select = select,
+      views = { preview },
+      autoselect = autoselect,
     })
   end
 end
@@ -114,9 +111,7 @@ return {
   {
     "neovim/nvim-lspconfig",
     dependencies = { "camspiers/snap" },
-    keys = vim.tbl_map(function(value)
-      return { value, nil }
-    end, vim.tbl_values(MAPPINGS_LSP)),
+    keys = mappings_to_keys(MAPPINGS_LSP),
     init = function()
       local keys = require("lazyvim.plugins.lsp.keymaps").get()
       table.insert(keys, {
@@ -137,9 +132,7 @@ return {
     -- "camspiers/snap",
     dir = "~/dev/snap",
     dependencies = { "camspiers/luarocks" },
-    keys = vim.tbl_map(function(value)
-      return { value, nil }
-    end, vim.tbl_values(MAPPINGS)),
+    keys = mappings_to_keys(MAPPINGS),
     config = function()
       local snap = require("snap")
       local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
