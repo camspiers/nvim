@@ -3,13 +3,25 @@ local KEYS = {
   GIT_FILES = "<Leader>fg",
   BUFFERS = "<Leader>fb",
   OLDFILES = "<Leader>fo",
+
+  -- Grep
   GREP = "<Leader>ff",
   GREP_WORD = "<Leader>m",
   GREP_SELECTION = "<Leader>fm",
+
+  -- Marks
   MARKS = "<Leader>n",
   GLOBAL_MARKS = "<Leader>N",
   BUFFER = "<Leader>fi",
+
+  -- TODO better name
+  GREP_BUFFERS = "<Leader>fB",
   JUMPLIST = "<Leader>fj",
+
+  -- Git integrations
+  GIT_LOG = "<Leader>gl",
+  GIT_LOCAL_BRANCHES = "<Leader>gb",
+  GIT_REMOTE_BRANCHES = "<Leader>gB",
 
   -- LazyVim LSP overrides
   GO_TO_DEFINITION = "gd",
@@ -172,6 +184,64 @@ return {
             })
           end,
           { desc = "Show symbols" },
+        },
+        -- Git integrations
+        {
+          KEYS.GIT_LOG,
+          function()
+            snap.run({
+              producer = filter(snap.get("producer.git.log")),
+              select = function(selection)
+                snap.run({
+                  prompt = string.format("Action on commit '%s'?", selection.hash),
+                  suffix = "",
+                  producer = filter(function()
+                    return { "checkout", "reset" }
+                  end),
+                  select = function(choice)
+                    print(tostring(choice) .. " : " .. selection.hash)
+                  end,
+                  layout = function()
+                    return snap.get("layout")["%bottom"](0.2, 0.1)
+                  end,
+                })
+              end,
+              views = { snap.get("preview.git.log") },
+            })
+          end,
+          { desc = "Search in git log" },
+        },
+        {
+          KEYS.GIT_LOCAL_BRANCHES,
+          function()
+            snap.run({
+              producer = filter(snap.get("producer.git.branch.local")),
+              select = snap.get("select.git").branch,
+            })
+          end,
+          { desc = "Search in git branches" },
+        },
+        {
+          KEYS.GIT_REMOTE_BRANCHES,
+          function()
+            snap.run({
+              producer = filter(snap.get("producer.git.branch.remote")),
+              select = function(selection)
+                snap.run({
+                  producer = filter(function()
+                    return { "checkout", "reset" }
+                  end),
+                  select = function(choice)
+                    print(tostring(choice) .. " : " .. tostring(selection))
+                  end,
+                  layout = function()
+                    return snap.get("layout")["%bottom"](0.2, 0.1)
+                  end,
+                })
+              end,
+            })
+          end,
+          { desc = "Search in remote git branches" },
         },
       })
     end,
