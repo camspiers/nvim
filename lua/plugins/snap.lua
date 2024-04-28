@@ -65,8 +65,8 @@ return {
     dependencies = { "camspiers/snap" },
   },
   {
-    -- "camspiers/snap",
-    dir = "~/dev/snap",
+    "camspiers/snap",
+    -- dir = "~/dev/snap",
     dependencies = { "camspiers/luarocks" },
     keys = mappings_to_keys(KEYS),
     config = function()
