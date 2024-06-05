@@ -6,3 +6,4 @@ vim.g.mapleader = "\\"
 vim.g.maplocalleader = ","
 vim.opt.guifont = "Source Code Pro Light:h13"
 vim.opt.conceallevel = 0
+vim.g.background = "light"

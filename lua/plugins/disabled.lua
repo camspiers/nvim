@@ -16,4 +16,7 @@ return {
   { "echasnovski/mini.pairs", enabled = false },
   { "echasnovski/mini.ai", enabled = false },
   { "windwp/nvim-ts-autotag", enabled = false },
+  { "garymjr/nvim-snippets", enabled = false },
+  { "lukas-reineke/headlines.nvim", enabled = false },
+  { "iamcco/markdown-preview.nvim", enabled = false },
 }
