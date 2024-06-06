@@ -29,6 +29,9 @@ local KEYS = {
   GO_TO_TYPE_DEFINITION = "gy",
   GO_TO_REFERENCES = "gr",
   SHOW_SYMBOLS = "gb",
+
+  -- Resume search
+  RESUME_SEARCH = "<Leader>i",
 }
 
 local function mappings_to_keys(mappings)
@@ -74,6 +77,22 @@ return {
       remove_conflicting_lsp_keys()
 
       local snap = require("snap")
+      local tbl = require("snap.common.tbl")
+
+      local run = snap.run
+      local last_config = nil
+
+      snap.run = function(config)
+        last_config = config
+        local function on_update(filter)
+          if config.on_update then
+            config.on_update(filter)
+          end
+          last_config.initial_filter = filter
+        end
+        run(tbl.merge(config, { on_update = on_update }))
+      end
+
       local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
       local defaults = { prompt = "", suffix = "»" }
       local file = snap.config.file:with(defaults)
@@ -99,6 +118,14 @@ return {
       end
 
       snap.maps({
+        {
+          KEYS.RESUME_SEARCH,
+          function()
+            if last_config then
+              snap.run(last_config)
+            end
+          end,
+        },
         {
           KEYS.FILES,
           file({ producer = "ripgrep.file", args = { "--hidden", "--iglob", "!.git/*" } }),
