@@ -40,19 +40,6 @@ local function mappings_to_keys(mappings)
   end, vim.tbl_values(mappings))
 end
 
-local function remove_conflicting_lsp_keys()
-  local lsp_keymaps = require("lazyvim.plugins.lsp.keymaps").get()
-  local index = 1
-  for _, value in ipairs({ unpack(lsp_keymaps) }) do
-    if vim.tbl_contains(vim.tbl_values(KEYS), value[1]) then
-      table.remove(lsp_keymaps, index)
-    else
-      -- Only increment the index if we didn't remove a value
-      index = index + 1
-    end
-  end
-end
-
 return {
   {
     "camspiers/luarocks",
@@ -63,19 +50,11 @@ return {
     },
   },
   {
-    "neovim/nvim-lspconfig",
-    -- This is required because I want to override LazyVims telescope bindings with snap
-    dependencies = { "camspiers/snap" },
-  },
-  {
     "camspiers/snap",
     -- dir = "~/dev/snap",
     dependencies = { "camspiers/luarocks" },
     keys = mappings_to_keys(KEYS),
     config = function()
-      -- Remove all the LSP maps that we don't want
-      remove_conflicting_lsp_keys()
-
       local snap = require("snap")
       local tbl = require("snap.common.tbl")
 
