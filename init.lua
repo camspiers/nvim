@@ -56,6 +56,15 @@ vim.keymap.set("n", "<Leader><S-Tab>", vim.cmd.tabprev, { desc = "Prev Tab" })
 vim.keymap.set("n", "<Leader>l", "<cmd>Lazy<cr>", { desc = "Lazy" })
 vim.keymap.set("n", "<Leader>xl", "<cmd>lopen<cr>", { desc = "Location List" })
 vim.keymap.set("n", "<Leader>xq", "<cmd>copen<cr>", { desc = "Quickfix List" })
+vim.keymap.set({ "n", "i" }, "<Esc>", function()
+  vim.cmd.nohlsearch()
+  vim.cmd.stopinsert()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_config(win).relative == "win" then
+      vim.api.nvim_win_close(win, false)
+    end
+  end
+end)
 
 -- [[Options]]
 vim.g.mapleader = "\\"

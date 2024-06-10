@@ -1,9 +1,4 @@
 return {
-  -- {
-  --   "pmizio/typescript-tools.nvim",
-  --   dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
-  --   opts = {},
-  -- },
   {
     "hrsh7th/nvim-cmp",
     event = "InsertEnter",
@@ -13,11 +8,6 @@ return {
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       "hrsh7th/cmp-cmdline",
-      -- Snippets
-      "L3MON4D3/LuaSnip",
-      "saadparwaiz1/cmp_luasnip",
-      -- Add pictograms to LSP completions
-      "onsails/lspkind.nvim",
     },
     config = function()
       local cmp = require("cmp")
@@ -28,24 +18,6 @@ return {
           local context = require("cmp.config.context")
           return not (context.in_treesitter_capture("comment") == true or context.in_syntax_group("Comment"))
         end,
-        snippet = {
-          expand = function(args)
-            require("luasnip").lsp_expand(args.body)
-          end,
-        },
-        formatting = {
-          format = function(entry, vim_item)
-            if vim.tbl_contains({ "path" }, entry.source.name) then
-              local icon, hl_group = require("nvim-web-devicons").get_icon(entry:get_completion_item().label)
-              if icon then
-                vim_item.kind = icon
-                vim_item.kind_hl_group = hl_group
-                return vim_item
-              end
-            end
-            return require("lspkind").cmp_format({})(entry, vim_item)
-          end,
-        },
         window = {
           completion = cmp.config.window.bordered(),
           documentation = cmp.config.window.bordered(),
@@ -176,27 +148,101 @@ return {
         require("lspconfig")[server].setup(config)
       end
 
-      -- Connect keymaps when LSP servers attach to buffers
+      -- Setup snap actions for LSP
+      local snap = require("snap")
+      local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
+      local producers = require("snap.producer.lsp")
+
+      local function lsp_action(producer, enable_autoselect)
+        return function()
+          local select = require("snap.select.lsp")
+          snap.run({
+            producer = filter(producer),
+            select = select.select,
+            autoselect = enable_autoselect and select.autoselect or nil,
+            views = { require("snap.preview.lsp") },
+          })
+        end
+      end
+
+      local actions_config = {
+        {
+          keys = "<F2>",
+          action = vim.lsp.buf.rename,
+          enable = function(client)
+            return client.supports_method(vim.lsp.protocol.Methods.textDocument_rename)
+          end,
+        },
+        {
+          keys = "gd",
+          action = lsp_action(producers.definitions, true),
+          enable = function(client)
+            return client.supports_method(vim.lsp.protocol.Methods.textDocument_definition)
+          end,
+        },
+        {
+          keys = "gr",
+          action = lsp_action(producers.references, true),
+          enable = function(client)
+            return client.supports_method(vim.lsp.protocol.Methods.textDocument_references)
+          end,
+        },
+        {
+          keys = "gi",
+          action = lsp_action(producers.implementations, true),
+          enable = function(client)
+            return client.supports_method(vim.lsp.protocol.Methods.textDocument_implementation)
+          end,
+        },
+        {
+          keys = "<space>D",
+          action = lsp_action(producers.type_definitions, true),
+          enable = function(client)
+            return client.supports_method(vim.lsp.protocol.Methods.textDocument_typeDefinition)
+          end,
+        },
+        {
+          keys = "gb",
+          action = lsp_action(producers.symbols, false),
+          enable = function(client)
+            return client.supports_method(vim.lsp.protocol.Methods.textDocument_documentSymbol)
+          end,
+        },
+        {
+          keys = "[d",
+          action = function()
+            vim.diagnostic.jump({ count = -1 })
+          end,
+        },
+        {
+          keys = "]d",
+          action = function()
+            vim.diagnostic.jump({ count = 1 })
+          end,
+        },
+        {
+          keys = "[e",
+          action = function()
+            vim.diagnostic.jump({ count = -1, severity = vim.diagnostic.severity.ERROR })
+          end,
+        },
+        {
+          keys = "]e",
+          action = function()
+            vim.diagnostic.jump({ count = 1, severity = vim.diagnostic.severity.ERROR })
+          end,
+        },
+      }
+
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("UserLspConfig", {}),
-        callback = function(ev)
-          -- Enable completion triggered by <c-x><c-o>
-          vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
-
-          -- Buffer local mappings.
-          -- See `:help vim.lsp.*` for documentation on any of the below functions
-          local opts = { buffer = ev.buf }
-
-          vim.keymap.set("n", "<F2>", vim.lsp.buf.rename, opts)
-
-          -- vim.keymap.set({ "n", "v", "i" }, "<C-]>", vim.lsp.buf.code_action, opts)
-          -- vim.keymap.set("n", "<space>rn", vim.lsp.buf.rename, opts)
-          -- vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
-          -- vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
-          -- vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-          -- vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
-          -- vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
-          -- vim.keymap.set("n", "<space>D", vim.lsp.buf.type_definition, opts)
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          for _, value in ipairs(actions_config) do
+            if value.enable == nil or value.enable(client) then
+              vim.keymap.set("n", value.keys, value.action, { buffer = args.buf })
+            end
+          end
         end,
       })
     end,

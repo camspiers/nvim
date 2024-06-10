@@ -23,13 +23,6 @@ local KEYS = {
   GIT_LOCAL_BRANCHES = "<Leader>gb",
   GIT_REMOTE_BRANCHES = "<Leader>gB",
 
-  -- LazyVim LSP overrides
-  GO_TO_DEFINITION = "gd",
-  GO_TO_IMPLEMENTATION = "gI",
-  GO_TO_TYPE_DEFINITION = "gy",
-  GO_TO_REFERENCES = "gr",
-  SHOW_SYMBOLS = "gb",
-
   -- Resume search
   RESUME_SEARCH = "<Leader>i",
 }
@@ -44,7 +37,6 @@ return {
   {
     "camspiers/luarocks",
     lazy = true,
-    dependencies = { "rcarriga/nvim-notify" },
     opts = {
       rocks = { "fzy" },
     },
@@ -78,23 +70,6 @@ return {
       local vimgrep = snap.config.vimgrep:with(vim.tbl_extend("force", defaults, {
         limit = 50000,
       }))
-
-      local lsp = {
-        producers = require("snap.producer.lsp"),
-        select = require("snap.select.lsp"),
-        preview = require("snap.preview.lsp"),
-      }
-
-      local function create_snap_lsp_location_handler(producer)
-        return function()
-          snap.run({
-            producer = filter(producer),
-            select = lsp.select.select,
-            autoselect = lsp.select.autoselect,
-            views = { lsp.preview },
-          })
-        end
-      end
 
       snap.maps({
         {
@@ -159,37 +134,6 @@ return {
             })
           end,
           { desc = "Search in Jumplist" },
-        },
-        {
-          KEYS.GO_TO_DEFINITION,
-          create_snap_lsp_location_handler(lsp.producers.definitions),
-          { desc = "Go to definition" },
-        },
-        {
-          KEYS.GO_TO_IMPLEMENTATION,
-          create_snap_lsp_location_handler(lsp.producers.implementations),
-          { desc = "Go to implementation" },
-        },
-        {
-          KEYS.GO_TO_TYPE_DEFINITION,
-          create_snap_lsp_location_handler(lsp.producers.type_definitions),
-          { desc = "Go to type definition" },
-        },
-        {
-          KEYS.GO_TO_REFERENCES,
-          create_snap_lsp_location_handler(lsp.producers.references),
-          { desc = "Go to references" },
-        },
-        {
-          KEYS.SHOW_SYMBOLS,
-          function()
-            snap.run({
-              producer = filter(lsp.producers.symbols),
-              select = lsp.select.select,
-              views = { lsp.preview },
-            })
-          end,
-          { desc = "Show symbols" },
         },
         -- Git integrations
         {

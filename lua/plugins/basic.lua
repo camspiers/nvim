@@ -1,12 +1,9 @@
 return {
-  "tpope/vim-repeat",
-  "romainl/vim-cool",
-  "rcarriga/nvim-notify",
   "editorconfig/editorconfig-vim",
-  { "lukas-reineke/indent-blankline.nvim", main = "ibl", opts = { scope = { enabled = false } } },
   { "Olical/nfnl", ft = "fennel" },
   { "Bilal2453/luvit-meta", lazy = true },
   { "nvim-tree/nvim-web-devicons", lazy = true },
+  { "lukas-reineke/indent-blankline.nvim", main = "ibl", opts = { scope = { enabled = false } } },
   {
     "folke/lazydev.nvim",
     ft = "lua", -- only load on lua files
@@ -41,6 +38,7 @@ return {
       },
     },
     init = function()
+      -- I only use the tabline for tabs, this ensures that the showtabline setting doesn't get changed by lualine
       vim.api.nvim_create_autocmd("User", {
         pattern = "LazyLoad",
         callback = function(info)
@@ -56,10 +54,13 @@ return {
     cmd = "Oil",
     opts = {
       view_options = {
-        -- Show files and directories that start with "."
         show_hidden = true,
       },
       skip_confirm_for_simple_edits = true,
+      win_options = {
+        number = false,
+        relativenumber = false,
+      },
     },
   },
   {
