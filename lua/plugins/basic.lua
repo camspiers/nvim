@@ -30,10 +30,26 @@ return {
     opts = {
       theme = "catppuccin-latte",
       options = {
-        component_separators = " ",
-        section_separators = { left = "", right = "" },
+        section_separators = "",
+        component_separators = "",
+        globalstatus = true,
+      },
+      tabline = {
+        lualine_a = {
+          { "tabs" },
+        },
       },
     },
+    init = function()
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "LazyLoad",
+        callback = function(info)
+          if info.data == "lualine.nvim" then
+            vim.opt.showtabline = 1
+          end
+        end,
+      })
+    end,
   },
   {
     "stevearc/oil.nvim",

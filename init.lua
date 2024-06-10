@@ -50,6 +50,12 @@ vim.keymap.set("n", "<C-k>", "<C-w>k")
 vim.keymap.set("n", "<C-l>", "<C-w>l")
 vim.keymap.set("n", "[q", vim.cmd.cprev, { desc = "Previous Quickfix" })
 vim.keymap.set("n", "]q", vim.cmd.cnext, { desc = "Next Quickfix" })
+vim.keymap.set("n", "<Leader>+", vim.cmd.tabnew, { desc = "New Tab" })
+vim.keymap.set("n", "<Leader><Tab>", vim.cmd.tabnext, { desc = "Next Tab" })
+vim.keymap.set("n", "<Leader><S-Tab>", vim.cmd.tabprev, { desc = "Prev Tab" })
+vim.keymap.set("n", "<Leader>l", "<cmd>Lazy<cr>", { desc = "Lazy" })
+vim.keymap.set("n", "<Leader>xl", "<cmd>lopen<cr>", { desc = "Location List" })
+vim.keymap.set("n", "<Leader>xq", "<cmd>copen<cr>", { desc = "Quickfix List" })
 
 -- [[Options]]
 vim.g.mapleader = "\\"
@@ -63,7 +69,7 @@ vim.opt.relativenumber = true
 vim.opt.mouse = "a"
 vim.opt.clipboard = "unnamedplus"
 vim.opt.undofile = true
-vim.opt.ignorecase = true
+vim.opt.undolevels = 10000
 vim.opt.smartcase = true
 vim.opt.updatetime = 250
 vim.opt.timeoutlen = 300
@@ -73,10 +79,20 @@ vim.opt.scrolloff = 20
 vim.opt.splitbelow = true
 vim.opt.splitright = true
 vim.opt.breakindent = true
-vim.opt.laststatus = 3
+vim.opt.showmode = false
+vim.opt.wrap = false
+vim.opt.smoothscroll = true
+vim.opt.spelllang = { "en" }
+vim.opt.ignorecase = true
+vim.opt.inccommand = "nosplit"
+vim.opt.grepformat = "%f:%l:%c:%m"
+vim.opt.grepprg = "rg --vimgrep"
+vim.opt.wildmode = "longest:full,full"
 
 -- [[Plugins]]
-require("lazy").setup("plugins")
+require("lazy").setup("plugins", {
+  change_detection = { enabled = false },
+})
 
 -- [[Theme]]
 vim.cmd.colorscheme("catppuccin-latte")

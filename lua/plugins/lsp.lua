@@ -1,9 +1,9 @@
 return {
-  {
-    "pmizio/typescript-tools.nvim",
-    dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
-    opts = {},
-  },
+  -- {
+  --   "pmizio/typescript-tools.nvim",
+  --   dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
+  --   opts = {},
+  -- },
   {
     "hrsh7th/nvim-cmp",
     event = "InsertEnter",
@@ -129,8 +129,7 @@ return {
         },
         tailwindcss = {
           capabilities = capabilities,
-          filetypes = { "templ", "javascript", "typescript", "react", "vue" },
-          init_options = { userLanguages = { templ = "html" } },
+          filetypes = { "html", "react", "vue" },
         },
         tsserver = {
           capabilities = capabilities,
@@ -178,26 +177,28 @@ return {
       end
 
       -- Connect keymaps when LSP servers attach to buffers
-      -- vim.api.nvim_create_autocmd("LspAttach", {
-      --   group = vim.api.nvim_create_augroup("UserLspConfig", {}),
-      --   callback = function(ev)
-      --     -- Enable completion triggered by <c-x><c-o>
-      --     vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
-      --
-      --     -- Buffer local mappings.
-      --     -- See `:help vim.lsp.*` for documentation on any of the below functions
-      --     local opts = { buffer = ev.buf }
-      --     vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
-      --     vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-      --     vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-      --     vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
-      --     vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
-      --     vim.keymap.set("n", "<space>D", vim.lsp.buf.type_definition, opts)
-      --     vim.keymap.set("n", "<space>rn", vim.lsp.buf.rename, opts)
-      --     vim.keymap.set({ "n", "v", "i" }, "<C-.>", vim.lsp.buf.code_action, opts)
-      --     vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
-      --   end,
-      -- })
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("UserLspConfig", {}),
+        callback = function(ev)
+          -- Enable completion triggered by <c-x><c-o>
+          vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
+
+          -- Buffer local mappings.
+          -- See `:help vim.lsp.*` for documentation on any of the below functions
+          local opts = { buffer = ev.buf }
+
+          vim.keymap.set("n", "<F2>", vim.lsp.buf.rename, opts)
+
+          -- vim.keymap.set({ "n", "v", "i" }, "<C-]>", vim.lsp.buf.code_action, opts)
+          -- vim.keymap.set("n", "<space>rn", vim.lsp.buf.rename, opts)
+          -- vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
+          -- vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
+          -- vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+          -- vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
+          -- vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
+          -- vim.keymap.set("n", "<space>D", vim.lsp.buf.type_definition, opts)
+        end,
+      })
     end,
   },
 }
