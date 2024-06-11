@@ -26,45 +26,90 @@ local function close_all_buffers(force)
 end
 
 -- [[Keymaps]]
-vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
-vim.keymap.set("n", "<Leader>w", "<CMD>w<CR>", { desc = "Write" })
-vim.keymap.set("n", "<Tab>", "<CMD>bn<CR>", { desc = "Buffer next" })
-vim.keymap.set("n", "<S-Tab>", "<CMD>bp<CR>", { desc = "Buffer previous" })
-vim.keymap.set("n", "<Leader>x", "<CMD>bd<CR>", { desc = "Delete buffer" })
-vim.keymap.set("n", "<Leader><S-x>", "<CMD>bd!<CR>", { desc = "Delete buffer (!)" })
-vim.keymap.set("n", "<Leader>z", function()
-  close_all_buffers(false)
-end, { desc = "Delete all buffers" })
-vim.keymap.set("n", "<Leader><S-z>", function()
-  close_all_buffers(true)
-end, { desc = "Delete all buffers (!)" })
-vim.keymap.set("n", "<Leader>c", "<CMD>clo<CR>", { desc = "Close window" })
-vim.keymap.set("n", "<Leader><S-c>", "<CMD>%clo<CR>", { desc = "Close all windows" })
-vim.keymap.set("n", "<Leader>o", "<CMD>only<CR>", { desc = "Only window" })
-vim.keymap.set("n", "<Leader>'", "<CMD>Neogit<CR>", { desc = "Open Neogit" })
-vim.keymap.set("n", "<Leader>-", "<CMD>split<CR>", { desc = "Split below" })
-vim.keymap.set("n", "<Leader>|", "<CMD>vsplit<CR>", { desc = "Split right" })
-vim.keymap.set("n", "<C-h>", "<C-w>h")
-vim.keymap.set("n", "<C-j>", "<C-w>j")
-vim.keymap.set("n", "<C-k>", "<C-w>k")
-vim.keymap.set("n", "<C-l>", "<C-w>l")
-vim.keymap.set("n", "[q", vim.cmd.cprev, { desc = "Previous Quickfix" })
-vim.keymap.set("n", "]q", vim.cmd.cnext, { desc = "Next Quickfix" })
-vim.keymap.set("n", "<Leader>+", vim.cmd.tabnew, { desc = "New Tab" })
-vim.keymap.set("n", "<Leader><Tab>", vim.cmd.tabnext, { desc = "Next Tab" })
-vim.keymap.set("n", "<Leader><S-Tab>", vim.cmd.tabprev, { desc = "Prev Tab" })
-vim.keymap.set("n", "<Leader>l", "<cmd>Lazy<cr>", { desc = "Lazy" })
-vim.keymap.set("n", "<Leader>xl", "<cmd>lopen<cr>", { desc = "Location List" })
-vim.keymap.set("n", "<Leader>xq", "<cmd>copen<cr>", { desc = "Quickfix List" })
-vim.keymap.set({ "n", "i" }, "<Esc>", function()
-  vim.cmd.nohlsearch()
-  vim.cmd.stopinsert()
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_get_config(win).relative == "win" then
-      vim.api.nvim_win_close(win, false)
-    end
-  end
-end)
+local maps = {
+  {
+    key = "<Leader>z",
+    action = function()
+      close_all_buffers(false)
+    end,
+  },
+  {
+    key = "<Leader><S-z>",
+    action = function()
+      close_all_buffers(true)
+    end,
+  },
+  { key = "-", action = "<CMD>Oil<CR>" },
+  { key = "<Leader>w", action = "<CMD>w<CR>" },
+  { key = "<Tab>", action = "<CMD>bn<CR>" },
+  { key = "<S-Tab>", action = "<CMD>bp<CR>" },
+  { key = "<Leader>x", action = "<CMD>bd<CR>" },
+  { key = "<Leader><S-x>", action = "<CMD>bd!<CR>" },
+  { key = "<Leader>c", action = "<CMD>clo<CR>" },
+  { key = "<Leader><S-c>", action = "<CMD>%clo<CR>" },
+  { key = "<Leader>o", action = "<CMD>only<CR>" },
+  { key = "<Leader>'", action = "<CMD>Neogit<CR>" },
+  { key = "<Leader>-", action = "<CMD>split<CR>" },
+  { key = "<Leader>|", action = "<CMD>vsplit<CR>" },
+  { key = "<C-h>", action = "<C-w>h" },
+  { key = "<C-j>", action = "<C-w>j" },
+  { key = "<C-k>", action = "<C-w>k" },
+  { key = "<C-l>", action = "<C-w>l" },
+  { key = "[q", action = vim.cmd.cprev },
+  { key = "]q", action = vim.cmd.cnext },
+  { key = "<Leader>+", action = vim.cmd.tabnew },
+  { key = "<Leader><Tab>", action = vim.cmd.tabnext },
+  { key = "<Leader><S-Tab>", action = vim.cmd.tabprev },
+  { key = "<Leader>l", action = "<cmd>Lazy<cr>" },
+  { key = "<Leader>xl", action = "<cmd>lopen<cr>" },
+  { key = "<Leader>xq", action = "<cmd>copen<cr>" },
+  {
+    key = "<Esc>",
+    action = function()
+      vim.cmd.nohlsearch()
+      vim.cmd.stopinsert()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_win_get_config(win).relative == "win" then
+          vim.api.nvim_win_close(win, false)
+        end
+      end
+    end,
+    mode = { "n", "i" },
+  },
+  {
+    key = "<Leader>/",
+    action = function()
+      local mode = vim.api.nvim_get_mode().mode
+      local text = nil
+
+      if mode == "V" or mode == "v" then
+        local register = vim.fn.getreg('"')
+        vim.cmd("normal! y")
+        text = vim.fn.trim(vim.fn.getreg("@"))
+        vim.fn.setreg('"', register)
+      end
+
+      vim.cmd.term("ollama run code")
+      vim.cmd.startinsert()
+
+      local buffer = vim.api.nvim_get_current_buf()
+
+      if text ~= nil then
+        vim.api.nvim_chan_send(vim.b[buffer].terminal_job_id, '"""' .. text)
+      end
+
+      vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { buffer = buffer })
+      vim.keymap.set("n", "<Esc>", function()
+        vim.api.nvim_buf_delete(buffer, { force = true })
+      end, { buffer = buffer })
+    end,
+    mode = { "n", "v" },
+  },
+}
+
+for _, value in ipairs(maps) do
+  vim.keymap.set(value.mode or "n", value.key, value.action)
+end
 
 -- [[Options]]
 vim.g.mapleader = "\\"
