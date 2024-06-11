@@ -89,19 +89,21 @@ local maps = {
         vim.fn.setreg('"', register)
       end
 
-      vim.cmd.term("ollama run code")
-      vim.cmd.startinsert()
+      vim.cmd.term("ollama run code --nowordwrap")
 
       local buffer = vim.api.nvim_get_current_buf()
-
-      if text ~= nil then
-        vim.api.nvim_chan_send(vim.b[buffer].terminal_job_id, '"""' .. text)
-      end
 
       vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { buffer = buffer })
       vim.keymap.set("n", "<Esc>", function()
         vim.api.nvim_buf_delete(buffer, { force = true })
       end, { buffer = buffer })
+
+      vim.defer_fn(function()
+        if text ~= nil then
+          vim.api.nvim_chan_send(vim.b[buffer].terminal_job_id, '"""' .. text)
+        end
+        vim.cmd.startinsert()
+      end, 500)
     end,
     mode = { "n", "v" },
   },
