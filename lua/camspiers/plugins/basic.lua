@@ -1,3 +1,5 @@
+local vars = require("camspiers/share/vars")
+
 return {
   "editorconfig/editorconfig-vim",
   { "Olical/nfnl", ft = "fennel" },
@@ -19,13 +21,13 @@ return {
     "catppuccin/nvim",
     name = "catppuccin",
     opts = {
-      flavour = "latte",
+      flavour = vars.colorscheme_flavor,
     },
   },
   {
     "nvim-lualine/lualine.nvim",
     opts = {
-      theme = "catppuccin-latte",
+      theme = vars.colorscheme,
       options = {
         section_separators = "",
         component_separators = "",
