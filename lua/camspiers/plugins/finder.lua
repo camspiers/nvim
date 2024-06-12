@@ -23,12 +23,8 @@ local KEYS = {
   GIT_LOCAL_BRANCHES = "<Leader>gb",
   GIT_REMOTE_BRANCHES = "<Leader>gB",
 
-  -- LazyVim LSP overrides
-  GO_TO_DEFINITION = "gd",
-  GO_TO_IMPLEMENTATION = "gI",
-  GO_TO_TYPE_DEFINITION = "gy",
-  GO_TO_REFERENCES = "gr",
-  SHOW_SYMBOLS = "gb",
+  -- Resume search
+  RESUME_SEARCH = "<Leader>i",
 }
 
 local function mappings_to_keys(mappings)
@@ -37,32 +33,13 @@ local function mappings_to_keys(mappings)
   end, vim.tbl_values(mappings))
 end
 
-local function remove_conflicting_lsp_keys()
-  local lsp_keymaps = require("lazyvim.plugins.lsp.keymaps").get()
-  local index = 1
-  for _, value in ipairs({ unpack(lsp_keymaps) }) do
-    if vim.tbl_contains(vim.tbl_values(KEYS), value[1]) then
-      table.remove(lsp_keymaps, index)
-    else
-      -- Only increment the index if we didn't remove a value
-      index = index + 1
-    end
-  end
-end
-
 return {
   {
     "camspiers/luarocks",
     lazy = true,
-    dependencies = { "rcarriga/nvim-notify" },
     opts = {
       rocks = { "fzy" },
     },
-  },
-  {
-    "neovim/nvim-lspconfig",
-    -- This is required because I want to override LazyVims telescope bindings with snap
-    dependencies = { "camspiers/snap" },
   },
   {
     "camspiers/snap",
@@ -70,10 +47,23 @@ return {
     dependencies = { "camspiers/luarocks" },
     keys = mappings_to_keys(KEYS),
     config = function()
-      -- Remove all the LSP maps that we don't want
-      remove_conflicting_lsp_keys()
-
       local snap = require("snap")
+      local tbl = require("snap.common.tbl")
+
+      local run = snap.run
+      local last_config = nil
+
+      snap.run = function(config)
+        last_config = config
+        local function on_update(filter)
+          if config.on_update then
+            config.on_update(filter)
+          end
+          last_config.initial_filter = filter
+        end
+        run(tbl.merge(config, { on_update = on_update }))
+      end
+
       local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
       local defaults = { prompt = "", suffix = "»" }
       local file = snap.config.file:with(defaults)
@@ -81,24 +71,15 @@ return {
         limit = 50000,
       }))
 
-      local lsp = {
-        producers = require("snap.producer.lsp"),
-        select = require("snap.select.lsp"),
-        preview = require("snap.preview.lsp"),
-      }
-
-      local function create_snap_lsp_location_handler(producer)
-        return function()
-          snap.run({
-            producer = filter(producer),
-            select = lsp.select.select,
-            autoselect = lsp.select.autoselect,
-            views = { lsp.preview },
-          })
-        end
-      end
-
       snap.maps({
+        {
+          KEYS.RESUME_SEARCH,
+          function()
+            if last_config then
+              snap.run(last_config)
+            end
+          end,
+        },
         {
           KEYS.FILES,
           file({ producer = "ripgrep.file", args = { "--hidden", "--iglob", "!.git/*" } }),
@@ -153,37 +134,6 @@ return {
             })
           end,
           { desc = "Search in Jumplist" },
-        },
-        {
-          KEYS.GO_TO_DEFINITION,
-          create_snap_lsp_location_handler(lsp.producers.definitions),
-          { desc = "Go to definition" },
-        },
-        {
-          KEYS.GO_TO_IMPLEMENTATION,
-          create_snap_lsp_location_handler(lsp.producers.implementations),
-          { desc = "Go to implementation" },
-        },
-        {
-          KEYS.GO_TO_TYPE_DEFINITION,
-          create_snap_lsp_location_handler(lsp.producers.type_definitions),
-          { desc = "Go to type definition" },
-        },
-        {
-          KEYS.GO_TO_REFERENCES,
-          create_snap_lsp_location_handler(lsp.producers.references),
-          { desc = "Go to references" },
-        },
-        {
-          KEYS.SHOW_SYMBOLS,
-          function()
-            snap.run({
-              producer = filter(lsp.producers.symbols),
-              select = lsp.select.select,
-              views = { lsp.preview },
-            })
-          end,
-          { desc = "Show symbols" },
         },
         -- Git integrations
         {
