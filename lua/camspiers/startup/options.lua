@@ -1,7 +1,6 @@
 vim.g.mapleader = "\\"
 vim.g.maplocalleader = ","
 vim.g.background = "light"
-vim.opt.guifont = "Source Code Pro Light:h13"
 vim.opt.conceallevel = 0
 vim.opt.cursorline = true
 vim.opt.number = true

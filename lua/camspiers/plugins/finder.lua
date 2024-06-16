@@ -47,9 +47,32 @@ return {
     dependencies = { "camspiers/luarocks" },
     keys = mappings_to_keys(KEYS),
     config = function()
+      vim.ui.select = function(items, opts, on_choice)
+        local snap = require("snap")
+        local filter = pcall(require, "fzy") and snap.get("consumer.fzy") or snap.get("consumer.fzf")
+        snap.run({
+          prompt = opts.prompt or "Select>",
+          producer = filter(function()
+            local result = {}
+            for index, value in ipairs(items) do
+              table.insert(
+                result,
+                snap.with_metas(opts.format_item and opts.format_item(value) or value, { value = value, index = index })
+              )
+            end
+            return result
+          end),
+          select = vim.schedule_wrap(function(selection)
+            if selection == nil then
+              return
+            end
+            on_choice(selection.value, selection.index)
+          end),
+        })
+      end
+
       local snap = require("snap")
       local tbl = require("snap.common.tbl")
-
       local run = snap.run
       local last_config = nil
 
