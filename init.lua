@@ -12,10 +12,13 @@ if not vim.uv.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- Allow the sourcing of lua files from a non "nvim" directory, specifically to avoid commiting private code
+package.path = package.path .. ";" .. vim.fn.stdpath("config") .. "/../nvim-lua/?.lua"
+
 -- [[Plugins]]
 require("lazy").setup("camspiers/plugins", {
   change_detection = { enabled = false },
-  checker = { enabled = true },
+  checker = { enabled = false },
 })
 
 -- [[Custom]]
