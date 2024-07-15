@@ -1,6 +1,16 @@
 local vars = require("camspiers/share/vars")
 
 return {
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    opts = {
+      flavour = vars.colorscheme_flavor,
+    },
+    init = function()
+      -- vim.cmd.colorscheme(require("camspiers/share/vars").colorscheme)
+    end,
+  },
   "editorconfig/editorconfig-vim",
   { "Olical/nfnl", ft = "fennel" },
   { "Bilal2453/luvit-meta", lazy = true },
@@ -15,13 +25,6 @@ return {
         -- Load luvit types when the `vim.uv` word is found
         { path = "luvit-meta/library", words = { "vim%.uv" } },
       },
-    },
-  },
-  {
-    "catppuccin/nvim",
-    name = "catppuccin",
-    opts = {
-      flavour = vars.colorscheme_flavor,
     },
   },
   {
