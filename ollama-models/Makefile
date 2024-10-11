@@ -1,9 +1,11 @@
 # Define the phony targets
-.PHONY: all build
+.PHONY: all code spanish
 
 # The default target
-all: build
+all: code spanish
 
-# The build target
-build:
+code:
 	ollama create code -f ./Modelfile.code
+
+spanish:
+	ollama create spanish -f ./Modelfile.spanish

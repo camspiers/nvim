@@ -106,20 +106,20 @@ return {
           capabilities = capabilities,
           filetypes = { "html", "react", "vue" },
         },
-        tsserver = {
+        ts_ls = {
           capabilities = capabilities,
           filetypes = { "javascript", "typescript", "typescriptreact", "javascriptreact", "react", "vue" },
-          init_options = {
-            plugins = {
-              {
-                name = "@vue/typescript-plugin",
-                -- Location of @vue/typescript-plugin
-                location = vim.fn.stdpath("data")
-                  .. "/mason/packages/vue-language-server/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin",
-                languages = { "javascript", "typescript", "vue" },
-              },
-            },
-          },
+          -- init_options = {
+          --   plugins = {
+          --     {
+          --       name = "@vue/typescript-plugin",
+          --       -- Location of @vue/typescript-plugin
+          --       location = vim.fn.stdpath("data")
+          --         .. "/mason/packages/vue-language-server/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin",
+          --       languages = { "javascript", "typescript", "vue" },
+          --     },
+          --   },
+          -- },
         },
         volar = {
           capabilities = capabilities,
