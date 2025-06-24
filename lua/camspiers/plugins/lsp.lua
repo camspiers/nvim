@@ -1,155 +1,65 @@
 return {
   {
-    "hrsh7th/nvim-cmp",
-    event = "InsertEnter",
+    "williamboman/mason.nvim",
     dependencies = {
-      -- Completion sources
-      "hrsh7th/cmp-nvim-lsp",
-      "hrsh7th/cmp-buffer",
-      "hrsh7th/cmp-path",
-      "hrsh7th/cmp-cmdline",
-    },
-    config = function()
-      local cmp = require("cmp")
-
-      cmp.setup({
-        -- Enabled except when in comments
-        enabled = function()
-          local context = require("cmp.config.context")
-          return not (context.in_treesitter_capture("comment") == true or context.in_syntax_group("Comment"))
-        end,
-        window = {
-          completion = cmp.config.window.bordered(),
-          documentation = cmp.config.window.bordered(),
-        },
-        mapping = cmp.mapping.preset.insert({
-          ["<C-n>"] = cmp.mapping.select_next_item(),
-          ["<C-p>"] = cmp.mapping.select_prev_item(),
-          ["<C-d>"] = cmp.mapping.scroll_docs(-4),
-          ["<C-f>"] = cmp.mapping.scroll_docs(4),
-          ["<C-Space>"] = cmp.mapping.complete({}),
-          ["<CR>"] = cmp.mapping.confirm({
-            behavior = cmp.ConfirmBehavior.Replace,
-            select = true,
-          }),
-          ["<Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_next_item()
-            else
-              fallback()
-            end
-          end, { "i", "s" }),
-          ["<S-Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_prev_item()
-            else
-              fallback()
-            end
-          end, { "i", "s" }),
-        }),
-        sources = cmp.config.sources({
-          { name = "nvim_lsp" },
-        }, {
-          { name = "buffer" },
-        }),
-      })
-      -- Use buffer source for `/` and `?` (if you enabled `native_menu`, this won't work anymore).
-      cmp.setup.cmdline({ "/", "?" }, {
-        mapping = cmp.mapping.preset.cmdline(),
-        sources = {
-          { name = "buffer" },
-        },
-      })
-      cmp.setup.cmdline(":", {
-        mapping = cmp.mapping.preset.cmdline(),
-        sources = cmp.config.sources({
-          { name = "path" },
-        }, {
-          { name = "cmdline" },
-        }),
-      })
-    end,
-  },
-  {
-    "neovim/nvim-lspconfig",
-    dependencies = {
-      -- Automatically install LSPs to stdpath for neovim
-      { "williamboman/mason.nvim", config = true },
       { "williamboman/mason-lspconfig.nvim" },
+      { "neovim/nvim-lspconfig" },
       { "j-hui/fidget.nvim", opts = {} },
     },
     config = function()
-      local capabilities = require("cmp_nvim_lsp").default_capabilities()
+      local lsp = require("lspconfig")
 
-      local servers = {
-        robotframework_ls = {
-          capabilities = capabilities,
-        },
-        lua_ls = {
-          capabilities = capabilities,
-        },
-        html = {
-          capabilities = capabilities,
-          filetypes = { "html", "vue" },
-        },
-        cssls = {
-          capabilities = capabilities,
-          settings = {
-            validate = true,
-            lint = {
-              -- For tailwindcss @apply
-              unknownAtRules = "ignore",
-            },
-          },
-        },
-        tailwindcss = {
-          capabilities = capabilities,
-          filetypes = { "html", "react", "vue" },
-        },
-        ts_ls = {
-          capabilities = capabilities,
-          filetypes = { "javascript", "typescript", "typescriptreact", "javascriptreact", "react", "vue" },
-          -- init_options = {
-          --   plugins = {
-          --     {
-          --       name = "@vue/typescript-plugin",
-          --       -- Location of @vue/typescript-plugin
-          --       location = vim.fn.stdpath("data")
-          --         .. "/mason/packages/vue-language-server/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin",
-          --       languages = { "javascript", "typescript", "vue" },
-          --     },
-          --   },
-          -- },
-        },
-        volar = {
-          capabilities = capabilities,
-        },
-        eslint = {
-          capabilities = capabilities,
-        },
-      }
+      require("mason").setup()
 
       require("mason-lspconfig").setup({
-        ensure_installed = vim.tbl_keys(servers),
-        diagnostics = {
-          underline = true,
-          update_in_insert = false,
-          virtual_text = {
-            spacing = 4,
-            source = "if_many",
-            prefix = "●",
-          },
-          severity_sort = true,
-        },
+        automatic_installation = true,
         inlay_hints = {
           enabled = false,
         },
-      })
+        ensure_installed = {
+          "robotframework_ls",
+          "lua_ls",
+          "html",
+          "cssls",
+          "tailwindcss",
+          "ts_ls",
+          "volar",
+          "reason_ls",
+          "ocamllsp",
+          "biome",
+        },
+        handlers = {
+          function(server)
+            lsp[server].setup({})
+          end,
 
-      -- Register the LSP servers
-      for server, config in pairs(servers) do
-        require("lspconfig")[server].setup(config)
-      end
+          tailwindcss = function()
+            lsp.tailwindcss.setup({
+              filetypes = { "templ", "javascript", "typescript", "react", "vue", "html" },
+              init_options = { userLanguages = { templ = "html" } },
+            })
+          end,
+
+          ts_ls = function()
+            lsp.ts_ls.setup({
+              root_dir = lsp.util.root_pattern("package.json", "tsconfig.json"),
+              single_file_support = false,
+              filetypes = { "javascript", "typescript", "typescriptreact", "javascriptreact", "react", "vue" },
+              init_options = {
+                plugins = {
+                  -- Vue.js typescript support
+                  {
+                    name = "@vue/typescript-plugin",
+                    location = vim.fn.stdpath("data")
+                      .. "/mason/packages/vue-language-server/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin",
+                    languages = { "javascript", "typescript", "vue" },
+                  },
+                },
+              },
+            })
+          end,
+        },
+      })
 
       -- Setup snap actions for LSP
       local snap = require("snap")

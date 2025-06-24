@@ -105,7 +105,18 @@ return {
         },
         {
           KEYS.FILES,
-          file({ producer = "ripgrep.file", args = { "--hidden", "--iglob", "!.git/*" } }),
+          function()
+            local cwd = vim.fn.getcwd()
+            local args = { "--hidden", "--iglob", "!.git/*" }
+            local dir = "provision-plus"
+
+            if cwd:sub(-#dir) == dir then
+              table.insert(args, "--iglob")
+              table.insert(args, "!client/*")
+            end
+
+            file({ producer = "ripgrep.file", args = args })()
+          end,
           { command = "files" },
         },
         { KEYS.GIT_FILES, file({ producer = "git.file" }), { command = "git.files" } },

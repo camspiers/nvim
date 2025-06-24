@@ -66,6 +66,8 @@ local maps = {
       end, 500)
     end,
   },
+  { key = "<Leader>e", action = vim.diagnostic.open_float },
+  { key = "<Leader>q", action = vim.diagnostic.setloclist },
 }
 
 for _, value in ipairs(maps) do

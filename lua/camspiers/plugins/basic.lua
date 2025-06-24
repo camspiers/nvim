@@ -4,8 +4,10 @@ return {
   {
     "catppuccin/nvim",
     name = "catppuccin",
+    priority = 1000,
     opts = {
       flavour = vars.colorscheme_flavor,
+      integrations = { cmp = false, blink_cmp = true },
     },
     init = function()
       -- vim.cmd.colorscheme(require("camspiers/share/vars").colorscheme)
@@ -73,5 +75,12 @@ return {
     cmd = "Neogit",
     dependencies = { "nvim-lua/plenary.nvim", "sindrets/diffview.nvim" },
     config = true,
+  },
+  {
+    "FabijanZulj/blame.nvim",
+    lazy = false,
+    config = function()
+      require("blame").setup({})
+    end,
   },
 }
