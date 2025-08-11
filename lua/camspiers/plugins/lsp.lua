@@ -1,65 +1,32 @@
 return {
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason-lspconfig.nvim",
     dependencies = {
-      { "williamboman/mason-lspconfig.nvim" },
+      { "mason-org/mason.nvim", opts = {} },
       { "neovim/nvim-lspconfig" },
       { "j-hui/fidget.nvim", opts = {} },
     },
     config = function()
-      local lsp = require("lspconfig")
-
-      require("mason").setup()
+      local servers = {
+        "robotframework_ls",
+        "html",
+        "cssls",
+        "tailwindcss",
+        "reason_ls",
+        "ocamllsp",
+        "biome",
+        "lua_ls",
+        "ts_ls",
+        "vue_ls",
+        "vtsls",
+      }
 
       require("mason-lspconfig").setup({
-        automatic_installation = true,
-        inlay_hints = {
-          enabled = false,
-        },
-        ensure_installed = {
-          "robotframework_ls",
-          "lua_ls",
-          "html",
-          "cssls",
-          "tailwindcss",
-          "ts_ls",
-          "volar",
-          "reason_ls",
-          "ocamllsp",
-          "biome",
-        },
-        handlers = {
-          function(server)
-            lsp[server].setup({})
-          end,
-
-          tailwindcss = function()
-            lsp.tailwindcss.setup({
-              filetypes = { "templ", "javascript", "typescript", "react", "vue", "html" },
-              init_options = { userLanguages = { templ = "html" } },
-            })
-          end,
-
-          ts_ls = function()
-            lsp.ts_ls.setup({
-              root_dir = lsp.util.root_pattern("package.json", "tsconfig.json"),
-              single_file_support = false,
-              filetypes = { "javascript", "typescript", "typescriptreact", "javascriptreact", "react", "vue" },
-              init_options = {
-                plugins = {
-                  -- Vue.js typescript support
-                  {
-                    name = "@vue/typescript-plugin",
-                    location = vim.fn.stdpath("data")
-                      .. "/mason/packages/vue-language-server/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin",
-                    languages = { "javascript", "typescript", "vue" },
-                  },
-                },
-              },
-            })
-          end,
-        },
+        automatic_enable = false,
+        ensure_installed = servers,
       })
+
+      vim.lsp.enable(servers)
 
       -- Setup snap actions for LSP
       local snap = require("snap")
